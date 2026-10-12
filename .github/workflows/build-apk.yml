@@ -1,0 +1,125 @@
+name: Build Debug APK
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build & Release Debug APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Verify active Java version
+        run: java -version
+
+      - name: Set up Gradle 9.3.1
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.3.1'
+
+      - name: Create temporary debug keystore
+        run: |
+          keytool -genkey -v \
+            -keystore debug.keystore \
+            -storepass android \
+            -alias androiddebugkey \
+            -keypass android \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10000 \
+            -dname "CN=Android Debug,O=Android,C=US"
+
+      - name: Build Debug APK
+        id: build_apk
+        run: gradle :app:assembleDebug --stacktrace --no-daemon
+
+      - name: Upload APK artifact
+        id: upload_artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-debug-apk
+          path: app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+
+      - name: Publish GitHub Release
+        id: publish_release
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="v${{ github.run_number }}.${{ github.run_attempt }}"
+          TITLE="GameBridge Debug Build v${{ github.run_number }}.${{ github.run_attempt }}"
+          RELEASE_ASSET="app-debug-v${{ github.run_number }}.${{ github.run_attempt }}.apk"
+
+          cp app/build/outputs/apk/debug/app-debug.apk "$RELEASE_ASSET"
+
+          if gh release create "$TAG" "$RELEASE_ASSET" \
+            --target "${{ github.sha }}" \
+            --title "$TITLE" \
+            --notes "GameBridge automated debug build from commit ${{ github.sha }}." \
+            --latest; then
+            echo "RELEASE_SUCCESS=true" >> "$GITHUB_ENV"
+            echo "RELEASE_TAG=$TAG" >> "$GITHUB_ENV"
+            echo "RELEASE_ASSET=$RELEASE_ASSET" >> "$GITHUB_ENV"
+          else
+            echo "RELEASE_SUCCESS=false" >> "$GITHUB_ENV"
+            echo "RELEASE_TAG=$TAG" >> "$GITHUB_ENV"
+          fi
+
+      - name: Report Release Status and Workflow Summary
+        if: always() && steps.build_apk.outcome == 'success'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ "$RELEASE_SUCCESS" = "true" ]; then
+            RELEASE_URL=$(gh release view "$RELEASE_TAG" --json url -q .url 2>/dev/null || echo "")
+            echo "Release published successfully for tag $RELEASE_TAG."
+            {
+              echo "### 🚀 APK Build & Release Summary"
+              echo ""
+              echo "- **Build Status**: ✅ Succeeded"
+              echo "- **Release Status**: ✅ Published"
+              echo "- **Actions Artifact**: \`app-debug-apk\` (Available)"
+              echo "- **Release Tag**: \`$RELEASE_TAG\`"
+              echo "- **Release Asset**: \`$RELEASE_ASSET\`"
+              if [ -n "$RELEASE_URL" ]; then
+                echo "- **Release URL**: $RELEASE_URL"
+              fi
+              echo ""
+              echo "Directly downloadable APK asset is attached to the latest release."
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "::warning::Release publishing failed, but the APK build succeeded. The Actions artifact named app-debug-apk remains available."
+            echo "WARNING: Release publishing failed, but the APK build succeeded."
+            echo "The Actions artifact named app-debug-apk remains available."
+            {
+              echo "### ⚠️ APK Build Succeeded (Release Publishing Failed)"
+              echo ""
+              echo "> **Warning**: Release publishing failed, but the APK build succeeded."
+              echo ""
+              echo "- **APK Build Status**: ✅ Succeeded"
+              echo "- **Release Status**: ⚠️ Publishing Failed"
+              echo "- **Actions Artifact**: \`app-debug-apk\` (Available)"
+              echo "- **Attempted Release Tag**: \`$RELEASE_TAG\`"
+              echo ""
+              echo "#### Backup Instructions"
+              echo "The Actions artifact named **app-debug-apk** remains available."
+              echo "You can download the compiled APK directly from the **Artifacts** section of this GitHub Actions workflow run summary."
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
