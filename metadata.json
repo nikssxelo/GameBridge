@@ -1,0 +1,6 @@
+{
+  "name": "GameBridge",
+  "description": "Android Gaming Browser with customizable virtual controls for browser games by Nikssxelo",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

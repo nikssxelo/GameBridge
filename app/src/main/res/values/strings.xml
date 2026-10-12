@@ -1,0 +1,25 @@
+<resources>
+    <string name="app_name">GameBridge</string>
+    <string name="developer_branding">Created by Nikssxelo</string>
+    <string name="tagline">Android Gaming Browser for PC Web Games</string>
+    <string name="go">Go</string>
+    <string name="search_or_enter_url">Enter game URL or search…</string>
+    <string name="back">Back</string>
+    <string name="forward">Forward</string>
+    <string name="refresh">Refresh</string>
+    <string name="home">Home</string>
+    <string name="fullscreen">Fullscreen</string>
+    <string name="exit_fullscreen">Exit Fullscreen</string>
+    <string name="controls">Controls</string>
+    <string name="edit_mode">Edit Layout</string>
+    <string name="save_layout">Save</string>
+    <string name="reset_layout">Reset</string>
+    <string name="add_button">Add Button</string>
+    <string name="presets">Presets</string>
+    <string name="preset_fps">FPS (WASD + Mouse)</string>
+    <string name="preset_platformer">Platformer (Runner)</string>
+    <string name="preset_driving">Driving / Racing</string>
+    <string name="orientation_toggle">Orientation</string>
+    <string name="compatibility_notice">Virtual Input Notice</string>
+    <string name="compatibility_details">GameBridge dispatches synthetic KeyboardEvent and MouseEvent. Games enforcing event.isTrusted or desktop Pointer Lock may have limited support.</string>
+</resources>
